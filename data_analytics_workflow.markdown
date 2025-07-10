@@ -1,0 +1,1360 @@
+# Complete Data Analytics Workflow and Machine Learning Algorithms
+
+This document aggregates ready-to-use templates for a complete data analytics workflow, from data loading to reporting, plus 25 machine learning algorithms with explanations and code examples. Each template is designed to be downloadable and aligned with Scaler, Analytics Vidhya, GeeksforGeeks, and W3Schools syllabi. Includes cheat sheets and resources for further learning.
+
+## Table of Contents
+1. [Data Loading](#data-loading)
+2. [Data Cleaning](#data-cleaning)
+3. [Exploratory Data Analysis (EDA)](#exploratory-data-analysis-eda)
+4. [Feature Selection](#feature-selection)
+5. [Modeling Results](#modeling-results)
+6. [Text Analytics (NLP)](#text-analytics-nlp)
+7. [Data Collection](#data-collection)
+8. [Statistical Analysis](#statistical-analysis)
+9. [Predictive Modeling](#predictive-modeling)
+10. [Dashboard Creation](#dashboard-creation)
+11. [Time Series Forecasting](#time-series-forecasting)
+12. [Big Data Processing](#big-data-processing)
+13. [Portfolio Building](#portfolio-building)
+14. [Data Preprocessing](#data-preprocessing)
+15. [Advanced Visualization](#advanced-visualization)
+16. [Model Evaluation with Cross-Validation](#model-evaluation-with-cross-validation)
+17. [SQL-Based Reporting](#sql-based-reporting)
+18. [End-to-End Workflow](#end-to-end-workflow)
+19. [Machine Learning Algorithms](#machine-learning-algorithms)
+20. [Cheat Sheets](#cheat-sheets)
+21. [Resources](#resources)
+
+---
+
+## Data Loading
+**Description**: Loads data from CSV, Excel, JSON, or SQL databases.
+
+```python
+import pandas as pd
+import sqlite3
+
+# Load CSV file
+def load_csv(file_path):
+    try:
+        df = pd.read_csv(file_path)
+        print("CSV loaded successfully")
+        return df
+    except Exception as e:
+        print(f"Error loading CSV: {e}")
+        return None
+
+# Load Excel file
+def load_excel(file_path):
+    try:
+        df = pd.read_excel(file_path)
+        print("Excel loaded successfully")
+        return df
+    except Exception as e:
+        print(f"Error loading Excel: {e}")
+        return None
+
+# Load JSON file
+def load_json(file_path):
+    try:
+        df = pd.read_json(file_path)
+        print("JSON loaded successfully")
+        return df
+    except Exception as e:
+        print(f"Error loading JSON: {e}")
+        return None
+
+# Load data from SQL database
+def load_sql(database, query):
+    try:
+        conn = sqlite3.connect(database)
+        df = pd.read_sql_query(query, conn)
+        conn.close()
+        print("SQL data loaded successfully")
+        return df
+    except Exception as e:
+        print(f"Error loading SQL data: {e}")
+        return None
+
+# Example usage
+if __name__ == "__main__":
+    df_csv = load_csv("data.csv")
+    df_excel = load_excel("data.xlsx")
+    df_json = load_json("data.json")
+    df_sql = load_sql("database.db", "SELECT * FROM table_name")
+```
+
+---
+
+## Data Cleaning
+**Description**: Handles missing values, duplicates, and data type conversions.
+
+```python
+import pandas as pd
+
+def clean_data(df):
+    print("Initial Data Info:")
+    print(df.info())
+    
+    # Handle missing values
+    print("\nMissing Values:")
+    print(df.isnull().sum())
+    df = df.fillna(df.mean(numeric_only=True))
+    df = df.fillna("Unknown")
+    
+    # Remove duplicates
+    df = df.drop_duplicates()
+    print("\nDuplicates removed:", df.duplicated().sum())
+    
+    # Convert data types
+    for col in df.select_dtypes(include=['object']).columns:
+        if df[col].nunique() < 10:
+            df[col] = df[col].astype('category')
+    
+    print("\nCleaned Data Info:")
+    print(df.info())
+    return df
+
+# Example usage
+if __name__ == "__main__":
+    df = pd.read_csv("data.csv")
+    cleaned_df = clean_data(df)
+    cleaned_df.to_csv("cleaned_data.csv", index=False)
+```
+
+---
+
+## Exploratory Data Analysis (EDA)
+**Description**: Generates statistical summaries and visualizations.
+
+```python
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import os
+
+def perform_eda(df, output_dir="eda_plots"):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    print("Summary Statistics:")
+    print(df.describe(include='all'))
+    
+    print("\nMissing Values:")
+    print(df.isnull().sum())
+    
+    numerical_cols = df.select_dtypes(include=['int64', 'float64']).columns
+    for col in numerical_cols:
+        plt.figure(figsize=(8, 5))
+        sns.histplot(df[col], bins=30)
+        plt.title(f"Distribution of {col}")
+        plt.savefig(f"{output_dir}/{col}_histogram.png")
+        plt.close()
+        
+        plt.figure(figsize=(8, 5))
+        sns.boxplot(y=df[col])
+        plt.title(f"Boxplot of {col}")
+        plt.savefig(f"{output_dir}/{col}_boxplot.png")
+        plt.close()
+    
+    categorical_cols = df.select_dtypes(include=['category', 'object']).columns
+    for col in categorical_cols:
+        plt.figure(figsize=(8, 5))
+        sns.countplot(x=col, data=df)
+        plt.title(f"Count of {col}")
+        plt.xticks(rotation=45)
+        plt.savefig(f"{output_dir}/{col}_countplot.png")
+        plt.close()
+    
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(df[numerical_cols].corr(), annot=True, cmap='coolwarm')
+    plt.title("Correlation Heatmap")
+    plt.savefig(f"{output_dir}/correlation_heatmap.png")
+    plt.close()
+    
+    print(f"EDA plots saved in {output_dir}")
+
+# Example usage
+if __name__ == "__main__":
+    df = pd.read_csv("data.csv")
+    perform_eda(df)
+```
+
+---
+
+## Feature Selection
+**Description**: Selects important features using correlation and feature importance.
+
+```python
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import SelectKBest, f_classif
+
+def select_features(df, target_column, k=5):
+    X = df.drop(columns=[target_column])
+    y = df[target_column]
+    
+    numerical_cols = X.select_dtypes(include=['int64', 'float64']).columns
+    categorical_cols = X.select_dtypes(include=['category', 'object']).columns
+    
+    X = pd.get_dummies(X, columns=categorical_cols)
+    
+    corr_matrix = df[numerical_cols].corr()
+    high_corr = corr_matrix[abs(corr_matrix) > 0.8].stack().index.tolist()
+    print("Highly correlated features:", high_corr)
+    
+    rf = RandomForestClassifier(random_state=42)
+    rf.fit(X, y)
+    importance = pd.Series(rf.feature_importances_, index=X.columns)
+    print("\nFeature Importance:")
+    print(importance.sort_values(ascending=False))
+    
+    selector = SelectKBest(score_func=f_classif, k=k)
+    selector.fit(X, y)
+    selected_features = X.columns[selector.get_support()].tolist()
+    print("\nSelected Features:", selected_features)
+    
+    return selected_features, X[selected_features]
+
+# Example usage
+if __name__ == "__main__":
+    df = pd.read_csv("data.csv")
+    selected_features, X_selected = select_features(df, target_column="target")
+```
+
+---
+
+## Modeling Results
+**Description**: Trains and evaluates multiple machine learning models.
+
+```python
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import mean_squared_error, accuracy_score, classification_report
+
+def evaluate_models(X, y, problem_type="classification"):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    models = {
+        "Linear Regression": LinearRegression(),
+        "Logistic Regression": LogisticRegression(max_iter=1000),
+        "Random Forest": RandomForestClassifier(n_estimators=100, random_state=42)
+    }
+    
+    results = {}
+    for name, model in models.items():
+        model.fit(X_train, y_train)
+        predictions = model.predict(X_test)
+        
+        if problem_type == "regression":
+            score = mean_squared_error(y_test, predictions)
+            results[name] = {"MSE": score}
+        else:
+            score = accuracy_score(y_test, predictions)
+            report = classification_report(y_test, predictions)
+            results[name] = {"Accuracy": score, "Report": report}
+        
+        print(f"\n{name} Results:")
+        print(results[name])
+    
+    return results
+
+# Example usage
+if __name__ == "__main__":
+    df = pd.read_csv("data.csv")
+    X = df.drop(columns=["target"])
+    y = df["target"]
+    results = evaluate_models(X, y, problem_type="classification")
+```
+
+---
+
+## Text Analytics (NLP)
+**Description**: Processes text data and performs sentiment analysis.
+
+```python
+import pandas as pd
+from transformers import pipeline
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+def text_analytics(df, text_column):
+    classifier = pipeline("sentiment-analysis")
+    
+    df[text_column] = df[text_column].str.lower().str.replace(r'[^\w\s]', '')
+    
+    sentiments = [classifier(text)[0] for text in df[text_column]]
+    df["sentiment"] = [result["label"] for result in sentiments]
+    df["sentiment_score"] = [result["score"] for result in sentiments]
+    
+    vectorizer = TfidfVectorizer(max_features=1000)
+    X = vectorizer.fit_transform(df[text_column])
+    feature_names = vectorizer.get_feature_names_out()
+    print("Top TF-IDF Features:", feature_names[:10])
+    
+    return df, X
+
+# Example usage
+if __name__ == "__main__":
+    df = pd.read_csv("text_data.csv")
+    df, X = text_analytics(df, text_column="review")
+    df.to_csv("text_analyzed.csv", index=False)
+```
+
+---
+
+## Data Collection
+**Description**: Collects data from APIs and web scraping.
+
+```python
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+
+def collect_from_api(api_url):
+    try:
+        response = requests.get(api_url)
+        data = response.json()
+        df = pd.DataFrame(data)
+        print("API data collected successfully")
+        return df
+    except Exception as e:
+        print(f"Error collecting API data: {e}")
+        return None
+
+def scrape_web(url, tag, class_name):
+    try:
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        elements = soup.find_all(tag, class_=class_name)
+        data = [element.text for element in elements]
+        df = pd.DataFrame(data, columns=["scraped_data"])
+        print("Web data scraped successfully")
+        return df
+    except Exception as e:
+        print(f"Error scraping web data: {e}")
+        return None
+
+# Example usage
+if __name__ == "__main__":
+    api_url = "https://api.example.com/data"
+    web_url = "https://example.com"
+    df_api = collect_from_api(api_url)
+    df_web = scrape_web(web_url, tag="div", class_name="content")
+    if df_api is not None:
+        df_api.to_csv("api_data.csv", index=False)
+    if df_web is not None:
+        df_web.to_csv("web_data.csv", index=False)
+```
+
+---
+
+## Statistical Analysis
+**Description**: Performs descriptive and inferential statistical analysis.
+
+```python
+import pandas as pd
+import numpy as np
+from scipy.stats import ttest_ind, chi2_contingency
+import statsmodels.api as sm
+
+def statistical_analysis(df, target_column, categorical_col=None):
+    print("Descriptive Statistics:")
+    print(df.describe(include='all'))
+    
+    numerical_cols = df.select_dtypes(include=['int64', 'float64']).columns
+    for col in numerical_cols:
+        print(f"\n{col} Statistics:")
+        print(f"Mean: {df[col].mean()}")
+        print(f"Median: {df[col].median()}")
+        print(f"Std Dev: {df[col].std()}")
+    
+    if categorical_col and df[target_column].dtype in ['int64', 'float64']:
+        group1 = df[df[categorical_col] == df[categorical_col].unique()[0]][target_column]
+        group2 = df[df[categorical_col] == df[categorical_col].unique()[1]][target_column]
+        t_stat, p_value = ttest_ind(group1, group2)
+        print(f"\nT-Test for {target_column} by {categorical_col}:")
+        print(f"T-Statistic: {t_stat}, P-Value: {p_value}")
+    
+    if categorical_col and df[target_column].dtype == 'category':
+        contingency_table = pd.crosstab(df[categorical_col], df[target_column])
+        chi2, p, _, _ = chi2_contingency(contingency_table)
+        print(f"\nChi-Square Test for {target_column} vs {categorical_col}:")
+        print(f"Chi2: {chi2}, P-Value: {p}")
+    
+    if df[target_column].dtype in ['int64', 'float64']:
+        X = df[numerical_cols.drop(target_column, errors='ignore')]
+        X = sm.add_constant(X)
+        y = df[target_column]
+        model = sm.OLS(y, X).fit()
+        print("\nLinear Regression Summary:")
+        print(model.summary())
+    
+    return df
+
+# Example usage
+if __name__ == "__main__":
+    df = pd.read_csv("data.csv")
+    df = statistical_analysis(df, target_column="sales", categorical_col="region")
+```
+
+---
+
+## Predictive Modeling
+**Description**: Builds and evaluates predictive models.
+
+```python
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import mean_squared_error, accuracy_score, classification_report
+
+def predictive_modeling(df, target_column, problem_type="classification"):
+    X = df.drop(columns=[target_column])
+    X = pd.get_dummies(X)
+    y = df[target_column]
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    models = {
+        "Linear Regression": LinearRegression(),
+        "Logistic Regression": LogisticRegression(max_iter=1000),
+        "Random Forest": RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
+    }
+    
+    results = {}
+    for name, model in models.items():
+        model.fit(X_train, y_train)
+        predictions = model.predict(X_test)
+        
+        if problem_type == "regression":
+            score = mean_squared_error(y_test, predictions)
+            results[name] = {"MSE": score}
+        else:
+            score = accuracy_score(y_test, predictions)
+            report = classification_report(y_test, predictions)
+            results[name] = {"Accuracy": score, "Classification Report": report}
+        
+        print(f"\n{name} Results:")
+        print(results[name])
+    
+    return results, models
+
+# Example usage
+if __name__ == "__main__":
+    df = pd.read_csv("data.csv")
+    results, models = predictive_modeling(df, target_column="target", problem_type="classification")
+```
+
+---
+
+## Dashboard Creation
+**Description**: Simulates dashboard creation with visualizations.
+
+```python
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import os
+
+def create_dashboard(df, output_dir="dashboard_plots"):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    numerical_cols = df.select_dtypes(include=['int64', 'float64']).columns
+    categorical_cols = df.select_dtypes(include=['category', 'object']).columns
+    
+    for cat_col in categorical_cols:
+        for num_col in numerical_cols:
+            plt.figure(figsize=(10, 6))
+            sns.barplot(x=cat_col, y=num_col, data=df)
+            plt.title(f"{num_col} by {cat_col}")
+            plt.xticks(rotation=45)
+            plt.savefig(f"{output_dir}/{num_col}_by_{cat_col}_barplot.png")
+            plt.close()
+    
+    if any(df.columns.str.contains('date', case=False)):
+        date_col = df.columns[df.columns.str.contains('date', case=False)][0]
+        df[date_col] = pd.to_datetime(df[date_col])
+        for num_col in numerical_cols:
+            plt.figure(figsize=(10, 6))
+            plt.plot(df[date_col], df[num_col])
+            plt.title(f"{num_col} Over Time")
+            plt.xticks(rotation=45)
+            plt.savefig(f"{output_dir}/{num_col}_time_series.png")
+            plt.close()
+    
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(df[numerical_cols].corr(), annot=True, cmap='coolwarm')
+    plt.title("Correlation Heatmap")
+    plt.savefig(f"{output_dir}/correlation_heatmap.png")
+    plt.close()
+    
+    print(f"Dashboard plots saved in {output_dir}")
+
+# Example usage
+if __name__ == "__main__":
+    df = pd.read_csv("data.csv")
+    create_dashboard(df)
+```
+
+---
+
+## Time Series Forecasting
+**Description**: Forecasts time series data using ARIMA.
+
+```python
+import pandas as pd
+from statsmodels.tsa.arima.model import ARIMA
+import matplotlib.pyplot as plt
+
+def time_series_forecasting(df, date_column, value_column, forecast_steps=10):
+    df[date_column] = pd.to_datetime(df[date_column])
+    df.set_index(date_column, inplace=True)
+    ts_data = df[value_column]
+    
+    model = ARIMA(ts_data, order=(5,1,0))
+    model_fit = model.fit()
+    
+    forecast = model_fit.forecast(steps=forecast_steps)
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(ts_data, label='Historical Data')
+    plt.plot(forecast.index, forecast, label='Forecast', color='red')
+    plt.title(f"{value_column} Forecast")
+    plt.legend()
+    plt.savefig("time_series_forecast.png")
+    plt.close()
+    
+    print("Forecast Results:")
+    print(forecast)
+    
+    return forecast
+
+# Example usage
+if __name__ == "__main__":
+    df = pd.read_csv("time_series_data.csv")
+    forecast = time_series_forecasting(df, date_column="date", value_column="sales")
+```
+
+---
+
+## Big Data Processing
+**Description**: Processes large datasets using PySpark.
+
+```python
+from pyspark.sql import SparkSession
+import pandas as pd
+
+def big_data_processing(file_path, groupby_col, agg_col):
+    spark = SparkSession.builder.appName("BigDataProcessing").getOrCreate()
+    
+    df_spark = spark.read.csv(file_path, header=True, inferSchema=True)
+    
+    result = df_spark.groupBy(groupby_col).agg({"agg_col": "mean"}).withColumnRenamed("avg(agg_col)", f"mean_{agg_col}")
+    
+    result_pd = result.toPandas()
+    
+    spark.stop()
+    
+    print("Big Data Aggregation Results:")
+    print(result_pd)
+    
+    return result_pd
+
+# Example usage
+if __name__ == "__main__":
+    result = big_data_processing("large_data.csv", groupby_col="category", agg_col="sales")
+    result.to_csv("aggregated_data.csv", index=False)
+```
+
+---
+
+## Portfolio Building
+**Description**: Organizes project results into a portfolio.
+
+```python
+import pandas as pd
+import os
+
+def build_portfolio(project_data, output_dir="portfolio"):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    portfolio = []
+    
+    for project in project_data:
+        project_name = project["name"]
+        description = project["description"]
+        results = project["results"]
+        visualizations = project["visualizations"]
+        
+        with open(f"{output_dir}/{project_name}_summary.txt", "w") as f:
+            f.write(f"Project: {project_name}\n")
+            f.write(f"Description: {description}\n")
+            f.write(f"Results: {results}\n")
+            f.write(f"Visualizations: {', '.join(visualizations)}\n")
+    
+    print(f"Portfolio saved in {output_dir}")
+
+# Example usage
+if __name__ == "__main__":
+    project_data = [
+        {
+            "name": "Customer Churn Prediction",
+            "description": "Predict customer churn using Random Forest.",
+            "results": "Accuracy: 85%, Precision: 80%",
+            "visualizations": ["churn_heatmap.png", "churn_barplot.png"]
+        },
+        {
+            "name": "Sales Forecasting",
+            "description": "Time series forecasting of sales data.",
+            "results": "MAE: 120.5",
+            "visualizations": ["sales_forecast.png"]
+        }
+    ]
+    build_portfolio(project_data)
+```
+
+---
+
+## Data Preprocessing
+**Description**: Handles scaling, encoding, and outlier removal.
+
+```python
+import pandas as pd
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+import numpy as np
+
+def preprocess_data(df, target_column):
+    df = df.fillna(df.mean(numeric_only=True))
+    df = df.fillna(df.mode().iloc[0])
+    
+    numerical_cols = df.select_dtypes(include=['int64', 'float64']).columns
+    for col in numerical_cols:
+        Q1 = df[col].quantile(0.25)
+        Q3 = df[col].quantile(0.75)
+        IQR = Q3 - Q1
+        df = df[~((df[col] < (Q1 - 1.5 * IQR)) | (df[col] > (Q3 + 1.5 * IQR)))]
+    
+    categorical_cols = df.select_dtypes(include=['object', 'category']).columns
+    le = LabelEncoder()
+    for col in categorical_cols:
+        if col != target_column:
+            df[col] = le.fit_transform(df[col])
+    
+    scaler = StandardScaler()
+    df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
+    
+    print("Preprocessed Data Info:")
+    print(df.info())
+    return df
+
+# Example usage
+if __name__ == "__main__":
+    df = pd.read_csv("data.csv")
+    preprocessed_df = preprocess_data(df, target_column="target")
+    preprocessed_df.to_csv("preprocessed_data.csv", index=False)
+```
+
+---
+
+## Advanced Visualization
+**Description**: Creates advanced visualizations like pair plots and violin plots.
+
+```python
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import os
+
+def advanced_visualization(df, target_column, output_dir="visualizations"):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    numerical_cols = df.select_dtypes(include=['int64', 'float64']).columns
+    
+    sns.pairplot(df, hue=target_column, vars=numerical_cols)
+    plt.savefig(f"{output_dir}/pair_plot.png")
+    plt.close()
+    
+    categorical_cols = df.select_dtypes(include=['object', 'category']).columns
+    if len(categorical_cols) > 0:
+        for num_col in numerical_cols:
+            plt.figure(figsize=(10, 6))
+            sns.violinplot(x=categorical_cols[0], y=num_col, data=df)
+            plt.title(f"{num_col} by {categorical_cols[0]}")
+            plt.savefig(f"{output_dir}/{num_col}_violin_plot.png")
+            plt.close()
+    
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(x=target_column, y=numerical_cols[0], data=df)
+    plt.title(f"{numerical_cols[0]} by {target_column}")
+    plt.savefig(f"{output_dir}/box_plot.png")
+    plt.close()
+    
+    print(f"Advanced visualizations saved in {output_dir}")
+
+# Example usage
+if __name__ == "__main__":
+    df = pd.read_csv("data.csv")
+    advanced_visualization(df, target_column="target")
+```
+
+---
+
+## Model Evaluation with Cross-Validation
+**Description**: Evaluates models using cross-validation.
+
+```python
+import pandas as pd
+from sklearn.model_selection import cross_val_score, train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
+
+def evaluate_model_cv(df, target_column):
+    X = df.drop(columns=[target_column])
+    X = pd.get_dummies(X)
+    y = df[target_column]
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    
+    cv_scores = cross_val_score(model, X, y, cv=5, scoring='accuracy')
+    print("\nCross-Validation Scores:")
+    print(f"Mean Accuracy: {cv_scores.mean():.2f} (+/- {cv_scores.std() * 2:.2f})")
+    
+    model.fit(X_train, y_train)
+    predictions = model.predict(X_test)
+    accuracy = accuracy_score(y_test, predictions)
+    report = classification_report(y_test, predictions)
+    
+    print("\nTest Set Results:")
+    print(f"Accuracy: {accuracy:.2f}")
+    print("Classification Report:")
+    print(report)
+    
+    return model, cv_scores
+
+# Example usage
+if __name__ == "__main__":
+    df = pd.read_csv("data.csv")
+    model, cv_scores = evaluate_model_cv(df, target_column="target")
+```
+
+---
+
+## SQL-Based Reporting
+**Description**: Generates reports using SQL queries.
+
+```sql
+-- SQL Reporting Template
+CREATE TABLE IF NOT EXISTS sales_data (
+    id INT PRIMARY KEY,
+    region VARCHAR(50),
+    sales_amount FLOAT,
+    date DATE
+);
+
+INSERT INTO sales_data (id, region, sales_amount, date) VALUES
+(1, 'North', 1000.5, '2025-01-01'),
+(2, 'South', 1500.0, '2025-01-02'),
+(3, 'North', 800.0, '2025-01-03');
+
+SELECT 
+    region,
+    COUNT(*) as total_transactions,
+    AVG(sales_amount) as avg_sales,
+    SUM(sales_amount) as total_sales
+FROM sales_data
+GROUP BY region;
+
+SELECT 
+    date,
+    SUM(sales_amount) as daily_sales
+FROM sales_data
+GROUP BY date
+ORDER BY date;
+
+-- Export to CSV (Python)
+"""
+import pandas as pd
+import sqlite3
+
+conn = sqlite3.connect('database.db')
+query = '''
+SELECT region, COUNT(*) as total_transactions, AVG(sales_amount) as avg_sales, SUM(sales_amount) as total_sales
+FROM sales_data
+GROUP BY region
+'''
+df = pd.read_sql_query(query, conn)
+df.to_csv('sales_report.csv', index=False)
+conn.close()
+"""
+```
+
+---
+
+## End-to-End Workflow
+**Description**: Integrates data loading, cleaning, EDA, feature selection, modeling, and reporting.
+
+```python
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
+from scipy.stats import ttest_ind
+import os
+
+def end_to_end_workflow(file_path, target_column, output_dir="analysis_output"):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    try:
+        df = pd.read_csv(file_path)
+        print("Data loaded successfully")
+    except Exception as e:
+        print(f"Error loading data: {e}")
+        return None
+    
+    df = df.fillna(df.mean(numeric_only=True))
+    df = df.fillna("Unknown")
+    df = df.drop_duplicates()
+    print("\nData Cleaning Summary:")
+    print(df.info())
+    
+    print("\nDescriptive Statistics:")
+    print(df.describe(include='all'))
+    
+    numerical_cols = df.select_dtypes(include=['int64', 'float64']).columns
+    categorical_cols = df.select_dtypes(include=['category', 'object']).columns
+    
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(df[numerical_cols].corr(), annot=True, cmap='coolwarm')
+    plt.title("Correlation Heatmap")
+    plt.savefig(f"{output_dir}/correlation_heatmap.png")
+    plt.close()
+    
+    if len(categorical_cols) > 0:
+        plt.figure(figsize=(10, 6))
+        sns.countplot(x=categorical_cols[0], hue=target_column, data=df)
+        plt.title(f"{target_column} by {categorical_cols[0]}")
+        plt.savefig(f"{output_dir}/categorical_barplot.png")
+        plt.close()
+    
+    if df[target_column].dtype in ['int64', 'float64'] and len(categorical_cols) > 0:
+        group1 = df[df[categorical_cols[0]] == df[categorical_cols[0].unique()[0]]][target_column]
+        group2 = df[df[categorical_cols[0]] == df[categorical_cols[0].unique()[1]]][target_column]
+        t_stat, p_value = ttest_ind(group1, group2)
+        print(f"\nT-Test for {target_column} by {categorical_cols[0]}:")
+        print(f"T-Statistic: {t_stat}, P-Value: {p_value}")
+    
+    X = df.drop(columns=[target_column])
+    X = pd.get_dummies(X)
+    y = df[target_column]
+    rf = RandomForestClassifier(random_state=42)
+    rf.fit(X, y)
+    importance = pd.Series(rf.feature_importances_, index=X.columns)
+    print("\nFeature Importance:")
+    print(importance.sort_values(ascending=False).head(5))
+    
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+    predictions = model.predict(X_test)
+    accuracy = accuracy_score(y_test, predictions)
+    report = classification_report(y_test, predictions)
+    print("\nModel Results:")
+    print(f"Accuracy: {accuracy}")
+    print("Classification Report:")
+    print(report)
+    
+    with open(f"{output_dir}/analysis_report.txt", "w") as f:
+        f.write("Data Analysis Report\n")
+        f.write(f"Dataset: {file_path}\n")
+        f.write("\nDescriptive Statistics:\n")
+        f.write(str(df.describe(include='all')))
+        f.write("\nFeature Importance:\n")
+        f.write(str(importance.sort_values(ascending=False).head(5)))
+        f.write("\nModel Performance:\n")
+        f.write(f"Accuracy: {accuracy}\n")
+        f.write(f"Classification Report:\n{report}")
+    
+    print(f"\nAnalysis results and visualizations saved in {output_dir}")
+    return df, model
+
+# Example usage
+if __name__ == "__main__":
+    df, model = end_to_end_workflow("data.csv", target_column="target")
+```
+
+---
+
+## Machine Learning Algorithms
+**Description**: Covers 25 common machine learning algorithms with brief explanations, parameters, and code.
+
+### 1. Linear Regression
+- **Description**: Predicts continuous values using a linear equation.
+- **Use Case**: Sales forecasting, price prediction.
+- **Parameters**:
+  - `fit_intercept`: Include intercept (default=True).
+  - `n_jobs`: Parallel jobs (default=None).
+- **Code**:
+  ```python
+  from sklearn.linear_model import LinearRegression
+  model = LinearRegression()
+  model.fit(X_train.reshape(-1, 1), y_train)
+  predictions = model.predict(X_test.reshape(-1, 1))
+  ```
+
+### 2. Logistic Regression
+- **Description**: Classifies data into categories using a logistic function.
+- **Parameters**:
+  - `penalty`: Regularization (‘l1’, ‘l2’, default='l2').
+  - `C`: Inverse regularization strength (default=1.0).
+  - `max_iter`: Max iterations (default=100).
+- **Code**:
+  ```python
+  from sklearn.linear_model import LogisticRegression
+  model = LogisticRegression(max_iter=1000)
+  model.fit(X_train, y_train)
+  predictions = model.predict(X_test)
+  ```
+
+### 3. Decision Tree
+- **Description**: Splits data into branches for decisions.
+- **Parameters**:
+  - `max_depth`: Max tree depth (default=None).
+  - `min_samples_split`: Min samples to split (default=2).
+- **Code**:
+  ```python
+  from sklearn.tree import DecisionTreeClassifier
+  model = DecisionTreeClassifier(max_depth=3)
+  model.fit(X_train, y_train)
+  predictions = model.predict(X_test)
+  ```
+
+### 4. Random Forest
+- **Description**: Combines multiple decision trees for better accuracy.
+- **Parameters**:
+  - `n_estimators`: Number of trees (default=100).
+  - `max_depth`: Max depth per tree (default=None).
+- **Code**:
+  ```python
+  from sklearn.ensemble import RandomForestClassifier
+  model = RandomForestClassifier(n_estimators=100, random_state=42)
+  model.fit(X_train, y_train)
+  predictions = model.predict(X_test)
+  ```
+
+### 5. Support Vector Machine (SVM)
+- **Description**: Finds optimal hyperplane for classification.
+- **Parameters**:
+  - `kernel`: Kernel type (‘linear’, ‘rbf’, default='rbf').
+  - `C`: Regularization parameter (default=1.0).
+- **Code**:
+  ```python
+  from sklearn.svm import SVC
+  model = SVC(kernel='linear')
+  model.fit(X_train, y_train)
+  predictions = model.predict(X_test)
+  ```
+
+### 6. K-Nearest Neighbors (KNN)
+- **Description**: Classifies based on k nearest neighbors.
+- **Parameters**:
+  - `n_neighbors`: Number of neighbors (default=5).
+  - `weights`: Weight function (‘uniform’, ‘distance’).
+- **Code**:
+  ```python
+  from sklearn.neighbors import KNeighborsClassifier
+  model = KNeighborsClassifier(n_neighbors=5)
+  model.fit(X_train, y_train)
+  predictions = model.predict(X_test)
+  ```
+
+### 7. Naive Bayes
+- **Description**: Uses Bayes’ Theorem for classification.
+- **Parameters**:
+  - `var_smoothing`: Smoothing parameter (default=1e-9).
+- **Code**:
+  ```python
+  from sklearn.naive_bayes import GaussianNB
+  model = GaussianNB()
+  model.fit(X_train, y_train)
+  predictions = model.predict(X_test)
+  ```
+
+### 8. Gradient Boosting
+- **Description**: Builds trees sequentially to correct errors.
+- **Parameters**:
+  - `n_estimators`: Number of boosting stages (default=100).
+  - `learning_rate`: Step size (default=0.1).
+- **Code**:
+  ```python
+  from sklearn.ensemble import GradientBoostingClassifier
+  model = GradientBoostingClassifier(n_estimators=100)
+  model.fit(X_train, y_train)
+  predictions = model.predict(X_test)
+  ```
+
+### 9. XGBoost
+- **Description**: Optimized gradient boosting for performance.
+- **Parameters**:
+  - `n_estimators`: Number of trees (default=100).
+  - `max_depth`: Max tree depth (default=3).
+- **Code**:
+  ```python
+  from xgboost import XGBClassifier
+  model = XGBClassifier(n_estimators=100, max_depth=3)
+  model.fit(X_train, y_train)
+  predictions = model.predict(X_test)
+  ```
+
+### 10. LightGBM
+- **Description**: Fast gradient boosting for large datasets.
+- **Parameters**:
+  - `num_leaves`: Max tree leaves (default=31).
+  - `learning_rate`: Step size (default=0.1).
+- **Code**:
+  ```python
+  from lightgbm import LGBMClassifier
+  model = LGBMClassifier(num_leaves=31, learning_rate=0.1)
+  model.fit(X_train, y_train)
+  predictions = model.predict(X_test)
+  ```
+
+### 11. CatBoost
+- **Description**: Gradient boosting for categorical features.
+- **Parameters**:
+  - `iterations`: Number of iterations (default=1000).
+  - `depth`: Tree depth (default=6).
+- **Code**:
+  ```python
+  from catboost import CatBoostClassifier
+  model = CatBoostClassifier(iterations=100, depth=6, verbose=0)
+  model.fit(X_train, y_train)
+  predictions = model.predict(X_test)
+  ```
+
+### 12. K-Means Clustering
+- **Description**: Groups data into k clusters based on similarity.
+- **Parameters**:
+  - `n_clusters`: Number of clusters (default=8).
+  - `init`: Initialization method (‘k-means++’).
+- **Code**:
+  ```python
+  from sklearn.cluster import KMeans
+  model = KMeans(n_clusters=3, random_state=42)
+  clusters = model.fit_predict(X)
+  ```
+
+### 13. DBSCAN
+- **Description**: Clusters based on density, identifies outliers.
+- **Parameters**:
+  - `eps`: Max distance for points in a cluster (default=0.5).
+  - `min_samples`: Min points for a cluster (default=5).
+- **Code**:
+  ```python
+  from sklearn.cluster import DBSCAN
+  model = DBSCAN(eps=0.5, min_samples=5)
+  clusters = model.fit_predict(X)
+  ```
+
+### 14. Hierarchical Clustering
+- **Description**: Builds a hierarchy of clusters using a dendrogram.
+- **Parameters**:
+  - `n_clusters`: Number of clusters (default=None).
+  - `linkage`: Linkage criterion (‘ward’, ‘complete’).
+- **Code**:
+  ```python
+  from sklearn.cluster import AgglomerativeClustering
+  model = AgglomerativeClustering(n_clusters=3, linkage='ward')
+  clusters = model.fit_predict(X)
+  ```
+
+### 15. Principal Component Analysis (PCA)
+- **Description**: Reduces dimensionality by transforming features.
+- **Parameters**:
+  - `n_components`: Number of components (default=None).
+- **Code**:
+  ```python
+  from sklearn.decomposition import PCA
+  pca = PCA(n_components=2)
+  X_reduced = pca.fit_transform(X)
+  ```
+
+### 16. t-SNE
+- **Description**: Reduces dimensionality for visualization.
+- **Parameters**:
+  - `n_components`: Output dimensions (default=2).
+  - `perplexity`: Balance local/global structure (default=30).
+- **Code**:
+  ```python
+  from sklearn.manifold import TSNE
+  tsne = TSNE(n_components=2, perplexity=30)
+  X_reduced = tsne.fit_transform(X)
+  ```
+
+### 17. AdaBoost
+- **Description**: Boosts weak learners by weighting misclassified samples.
+- **Parameters**:
+  - `n_estimators`: Number of weak learners (default=50).
+  - `learning_rate`: Contribution of each learner (default=1.0).
+- **Code**:
+  ```python
+  from sklearn.ensemble import AdaBoostClassifier
+  model = AdaBoostClassifier(n_estimators=50)
+  model.fit(X_train, y_train)
+  predictions = model.predict(X_test)
+  ```
+
+### 18. Neural Network (MLP)
+- **Description**: Multi-layer perceptron for complex patterns.
+- **Parameters**:
+  - `hidden_layer_sizes`: Neurons in layers (default=(100,)).
+  - `max_iter`: Max iterations (default=200).
+- **Code**:
+  ```python
+  from sklearn.neural_network import MLPClassifier
+  model = MLPClassifier(hidden_layer_sizes=(100, 50), max_iter=500)
+  model.fit(X_train, y_train)
+  predictions = model.predict(X_test)
+  ```
+
+### 19. Convolutional Neural Network (CNN)
+- **Description**: Neural network for image or grid-like data.
+- **Parameters**:
+  - `filters`: Number of convolutional filters.
+  - `kernel_size`: Size of kernel (e.g., (3,3)).
+- **Code**:
+  ```python
+  from tensorflow.keras.models import Sequential
+  from tensorflow.keras.layers import Conv2D, Dense, Flatten
+  model = Sequential([
+      Conv2D(32, (3,3), activation='relu', input_shape=(28,28,1)),
+      Flatten(),
+      Dense(10, activation='softmax')
+  ])
+  model.compile(optimizer='adam', loss='sparse_categorical_crossentropy')
+  ```
+
+### 20. Recurrent Neural Network (RNN) / LSTM
+- **Description**: Handles sequential data with memory.
+- **Parameters**:
+  - `units`: Number of LSTM units.
+  - `return_sequences`: Return full sequence (default=False).
+- **Code**:
+  ```python
+  from tensorflow.keras.models import Sequential
+  from tensorflow.keras.layers import LSTM, Dense
+  model = Sequential([
+      LSTM(64, input_shape=(timesteps, features)),
+      Dense(1)
+  ])
+  model.compile(optimizer='adam', loss='mse')
+  ```
+
+### 21. ARIMA
+- **Description**: Time series forecasting using autoregression and moving averages.
+- **Parameters**:
+  - `order`: (p,d,q) for AR, differencing, MA.
+- **Code**:
+  ```python
+  from statsmodels.tsa.arima.model import ARIMA
+  model = ARIMA(time_series, order=(5,1,0))
+  model_fit = model.fit()
+  forecast = model_fit.forecast(steps=10)
+  ```
+
+### 22. Apriori
+- **Description**: Finds frequent itemsets and association rules.
+- **Parameters**:
+  - `min_support`: Minimum support threshold.
+  - `min_confidence`: Minimum confidence for rules.
+- **Code**:
+  ```python
+  from mlxtend.frequent_patterns import apriori, association_rules
+  frequent_itemsets = apriori(df, min_support=0.01, use_colnames=True)
+  rules = association_rules(frequent_itemsets, min_confidence=0.5)
+  ```
+
+### 23. Isolation Forest
+- **Description**: Detects anomalies using random splits.
+- **Parameters**:
+  - `n_estimators`: Number of trees (default=100).
+  - `contamination`: Proportion of outliers (default='auto').
+- **Code**:
+  ```python
+  from sklearn.ensemble import IsolationForest
+  model = IsolationForest(n_estimators=100, contamination=0.1)
+  anomalies = model.fit_predict(X)
+  ```
+
+### 24. Gaussian Mixture Model (GMM)
+- **Description**: Clusters using a mixture of Gaussians.
+- **Parameters**:
+  - `n_components`: Number of components (default=1).
+  - `covariance_type`: Covariance type (‘full’).
+- **Code**:
+  ```python
+  from sklearn.mixture import GaussianMixture
+  model = GaussianMixture(n_components=3)
+  clusters = model.fit_predict(X)
+  ```
+
+### 25. Transformer (BERT)
+- **Description**: Pre-trained model for NLP tasks.
+- **Parameters**:
+  - `model_name`: Pre-trained model (‘bert-base-uncased’).
+  - `num_labels`: Number of output labels.
+- **Code**:
+  ```python
+  from transformers import pipeline
+  classifier = pipeline("sentiment-analysis", model="distilbert-base-uncased")
+  result = classifier("I love data analytics!")
+  ```
+
+---
+
+## Cheat Sheets
+Quick references for key tools and concepts.
+
+### Python
+```python
+x = 5
+my_list = [1, 2, 3]
+for i in range(5): print(i)
+def add(a, b=10): return a + b
+```
+
+### Pandas
+```python
+df = pd.read_csv("data.csv")
+df.dropna()
+df.groupby("col1")["col2"].mean()
+```
+
+### NumPy
+```python
+arr = np.array([1, 2, 3])
+np.mean(arr)
+np.dot(arr, arr)
+```
+
+### Scikit-learn
+- Linear Regression: `model = LinearRegression(fit_intercept=True)`
+- Random Forest: `model = RandomForestClassifier(n_estimators=100)`
+
+### Matplotlib
+```python
+plt.plot(x, y)
+plt.scatter(x, y, color="red")
+plt.show()
+```
+
+### Seaborn
+```python
+sns.histplot(df["column"])
+sns.heatmap(df.corr(), annot=True)
+```
+
+### SQL
+```sql
+SELECT column FROM table WHERE condition;
+SELECT t1.col FROM table1 t1 JOIN table2 t2 ON t1.key = t2.key;
+```
+
+### Git
+```bash
+git add .
+git commit -m "Message"
+git push origin main
+```
+
+### Kaggle
+```python
+df = pd.read_csv('/kaggle/input/dataset-name/file.csv')
+submission.to_csv("submission.csv", index=False)
+```
+
+### TensorFlow
+```python
+model = tf.keras.Sequential([tf.keras.layers.Dense(64, activation='relu'), tf.keras.layers.Dense(1)])
+model.compile(optimizer='adam', loss='mse')
+```
+
+### NLP and LLMs
+```python
+from transformers import pipeline
+classifier = pipeline("sentiment-analysis")
+result = classifier("Great course!")
+```
+
+### Mathematics
+- **Linear Algebra**: Matrix multiplication: \(C = AB\), \(C_{ij} = \sum_k A_{ik}B_{kj}\)
+  ```python
+  np.dot(A, B)
+  ```
+- **Calculus**: Derivative: \(\frac{d}{dx}(x^n) = nx^{n-1}\)
+  ```python
+  with tf.GradientTape() as tape:
+      y = x**2
+  dy_dx = tape.gradient(y, x)
+  ```
+
+### Statistics
+- **Descriptive**: Mean: \(\bar{x} = \frac{\sum x_i}{n}\)
+  ```python
+  df["column"].mean()
+  ```
+- **Inferential**: T-test
+  ```python
+  from scipy.stats import ttest_1samp
+  ttest_1samp(data, popmean=0)
+  ```
+
+### Algorithms
+- **Linear Regression**: Parameters: `fit_intercept`, `n_jobs`.
+- **Random Forest**: Parameters: `n_estimators`, `max_depth`.
+- **K-Means**: Parameters: `n_clusters`, `init`.
+
+---
+
+## Resources
+A curated list of 30 resources for tutorials, code, datasets, and reports.
+
+1. [GeeksforGeeks Data Analysis Tutorial](https://www.geeksforgeeks.org/data-analysis-tutorial/)
+2. [GeeksforGeeks Mastering Data Analytics](https://www.geeksforgeeks.org/courses/data-analytics)
+3. [GeeksforGeeks Machine Learning Tutorial](https://www.geeksforgeeks.org/machine-learning/)
+4. [GeeksforGeeks Python for Data Science](https://www.geeksforgeeks.org/python-for-data-science/)
+5. [GeeksforGeeks SQL Tutorial](https://www.geeksforgeeks.org/sql-tutorial/)
+6. [W3Schools Data Analytics Program](https://campus.w3schools.com/collections/course-catalog/products/data-analytics-program)
+7. [W3Schools Data Science Tutorial](https://www.w3schools.com/datascience/)
+8. [W3Schools Python Tutorial](https://www.w3schools.com/python/)
+9. [W3Schools SQL Tutorial](https://www.w3schools.com/sql/)
+10. [W3Schools NumPy Tutorial](https://www.w3schools.com/python/numpy/)
+11. [W3Schools Pandas Tutorial](https://www.w3schools.com/python/pandas/)
+12. [Python Official Documentation](https://docs.python.org/3/)
+13. [Pandas Documentation](https://pandas.pydata.org/docs/)
+14. [NumPy Documentation](https://numpy.org/doc/stable/)
+15. [Scikit-learn Documentation](https://scikit-learn.org/stable/user_guide.html)
+16. [Matplotlib Documentation](https://matplotlib.org/stable/contents.html)
+17. [Seaborn Documentation](https://seaborn.pydata.org/)
+18. [TensorFlow Guide](https://www.tensorflow.org/guide)
+19. [Hugging Face Transformers](https://huggingface.co/docs/transformers)
+20. [Kaggle Datasets](https://www.kaggle.com/datasets)
+21. [Kaggle Notebooks](https://www.kaggle.com/code)
+22. [Git Documentation](https://git-scm.com/doc)
+23. [MySQL Documentation](https://dev.mysql.com/doc/)
+24. [Tableau Help](https://help.tableau.com/current/pro/desktop/en-us/)
+25. [Power BI Documentation](https://docs.microsoft.com/en-us/power-bi/)
+26. [DataCamp Projects](https://www.datacamp.com/projects)
+27. [Coursera Google Data Analytics](https://www.coursera.org/professional-certificates/google-data-analytics)
+28. [Codecademy Data Science](https://www.codecademy.com/learn/paths/data-science)
+29. [Khan Academy Statistics](https://www.khanacademy.org/math/statistics-probability)
+30. [MIT Linear Algebra](https://ocw.mit.edu/courses/mathematics/18-06-linear-algebra-spring-2010/)
