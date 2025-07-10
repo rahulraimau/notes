@@ -1,0 +1,17 @@
+import cv2
+cv2.imread('image.jpg')
+cv2.imshow()
+torch.tensor([1, 2, 3])
+model = YOLO("yolov8.pt")
+models.resnet50(pretrained=True)
+transforms.Compose([...])
+cosine_similarity(vectorA, vectorB)
+for i in tqdm(range(100)):
+    do_something(i)
+img = Image.open("photo.png")
+img = img.resize((256, 256))
+os.listdir("folder/")
+os.path.exists("file.txt")
+sys.argv  # list of command-line inputs
+sys.exit()  # gracefully exit the script
+
